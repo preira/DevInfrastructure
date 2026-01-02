@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: sonarqube-etl
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - sonarqube-etl:9119
+
+  - job_name: "redpanda"
+    static_configs:
+      - targets:
+          - "redpanda:9644"
