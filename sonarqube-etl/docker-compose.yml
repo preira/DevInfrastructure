@@ -1,0 +1,21 @@
+services:
+  sonarqube-etl:
+    build:
+      context: .
+    container_name: sonarqube-etl
+    environment:
+      SONAR_URL: ${SONAR_URL:-http://host.docker.internal:9000}
+      SONAR_TOKEN: ${SONAR_TOKEN:?set SONAR_TOKEN}
+      PROJECT_KEY_REGEX: ${PROJECT_KEY_REGEX:-.*}
+      PULL_INTERVAL_SECONDS: ${PULL_INTERVAL_SECONDS:-300}
+      VERIFY_TLS: ${VERIFY_TLS:-true}
+    ports:
+      - "9119:9119"
+    networks:
+      - observability-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  observability-net:
+    external: true

@@ -2,7 +2,7 @@ import os
 import re
 import threading
 import time
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple
 
 import requests
 from flask import Flask, Response, jsonify
@@ -24,6 +24,36 @@ VERIFY_TLS = _env_bool("VERIFY_TLS", True)
 
 _METRIC_KEYS = [
     "ncloc",
+    # SonarQube Measures → Coverage
+    # (Sonar uses line_coverage and branch_coverage; branch_coverage is often referred to as condition coverage.)
+    "line_coverage",
+    "branch_coverage",
+
+    # SonarQube Measures → Size
+    "lines",
+    "statements",
+    "functions",
+    "classes",
+    "files",
+    "directories",
+    "comment_lines",
+    "comment_lines_density",
+
+    # SonarQube Measures → Complexity
+    "complexity",
+    "cognitive_complexity",
+
+    # SonarQube Measures → Technical debt
+    # (sqale_index is technical debt in minutes)
+    "sqale_index",
+
+    # SonarQube Measures → Issue severities (legacy metric keys)
+    "blocker_violations",
+    "critical_violations",
+    "major_violations",
+    "minor_violations",
+    "info_violations",
+
     "bugs",
     "vulnerabilities",
     "code_smells",
@@ -71,6 +101,75 @@ class SonarExporter:
             registry=self._registry,
         )
 
+        # Global aggregate metrics (no labels to keep cardinality low)
+        self._global_projects_total = Gauge(
+            "sonar_global_projects_total",
+            "Total number of projects scraped",
+            registry=self._registry,
+        )
+        self._global_ncloc_total = Gauge(
+            "sonar_global_ncloc_total",
+            "Sum of NCLOC across scraped projects",
+            registry=self._registry,
+        )
+        self._global_bugs_total = Gauge(
+            "sonar_global_bugs_total",
+            "Sum of bugs across scraped projects",
+            registry=self._registry,
+        )
+        self._global_vulnerabilities_total = Gauge(
+            "sonar_global_vulnerabilities_total",
+            "Sum of vulnerabilities across scraped projects",
+            registry=self._registry,
+        )
+        self._global_code_smells_total = Gauge(
+            "sonar_global_code_smells_total",
+            "Sum of code smells across scraped projects",
+            registry=self._registry,
+        )
+        self._global_projects_with_bugs_gt0_total = Gauge(
+            "sonar_global_projects_with_bugs_gt0_total",
+            "Count of projects where bugs > 0",
+            registry=self._registry,
+        )
+        self._global_projects_with_vulnerabilities_gt0_total = Gauge(
+            "sonar_global_projects_with_vulnerabilities_gt0_total",
+            "Count of projects where vulnerabilities > 0",
+            registry=self._registry,
+        )
+
+        # Global Size aggregates
+        self._global_lines_total = Gauge(
+            "sonar_global_lines_total",
+            "Sum of lines across scraped projects",
+            registry=self._registry,
+        )
+        self._global_statements_total = Gauge(
+            "sonar_global_statements_total",
+            "Sum of statements across scraped projects",
+            registry=self._registry,
+        )
+        self._global_functions_total = Gauge(
+            "sonar_global_functions_total",
+            "Sum of functions across scraped projects",
+            registry=self._registry,
+        )
+        self._global_classes_total = Gauge(
+            "sonar_global_classes_total",
+            "Sum of classes across scraped projects",
+            registry=self._registry,
+        )
+        self._global_files_total = Gauge(
+            "sonar_global_files_total",
+            "Sum of files across scraped projects",
+            registry=self._registry,
+        )
+        self._global_comment_lines_total = Gauge(
+            "sonar_global_comment_lines_total",
+            "Sum of comment lines across scraped projects",
+            registry=self._registry,
+        )
+
         # Project metrics (controlled label cardinality)
         self._gauges: Dict[str, Gauge] = {}
         for key in _METRIC_KEYS:
@@ -84,8 +183,16 @@ class SonarExporter:
 
         self._known_labelsets: Dict[str, Set[Tuple[str, str]]] = {k: set() for k in _METRIC_KEYS}
 
+        # Track latest known project_name per project_key to remove stale labelsets on rename.
+        self._project_key_to_name: Dict[str, str] = {}
+
         self._lock = threading.Lock()
         self._last_error_message: Optional[str] = None
+        self._last_success_time: Optional[float] = None
+
+        # Cache SonarQube-supported metric keys to avoid hard failures when a key isn't available.
+        self._supported_metric_keys: Optional[Set[str]] = None
+        self._supported_metric_keys_fetched_at: Optional[float] = None
 
     @property
     def registry(self) -> CollectorRegistry:
@@ -98,7 +205,9 @@ class SonarExporter:
                 "project_key_regex": PROJECT_KEY_REGEX,
                 "pull_interval_seconds": PULL_INTERVAL_SECONDS,
                 "verify_tls": VERIFY_TLS,
+                # Do not include secrets; keep error payload intentionally minimal.
                 "last_error": self._last_error_message,
+                "last_success_unixtime": self._last_success_time,
             }
 
     def refresh_forever(self) -> None:
@@ -111,7 +220,7 @@ class SonarExporter:
                 self.refresh_once()
                 ok = True
             except Exception as exc:  # defensive: exporter must not crash
-                err_msg = str(exc)
+                err_msg = self._format_error(exc)
             duration = time.time() - start
 
             with self._lock:
@@ -119,7 +228,9 @@ class SonarExporter:
                 if ok:
                     self._up.set(1)
                     self._last_error.set(0)
-                    self._last_success_unixtime.set(time.time())
+                    now = time.time()
+                    self._last_success_unixtime.set(now)
+                    self._last_success_time = now
                     self._last_error_message = None
                 else:
                     self._up.set(0)
@@ -128,17 +239,60 @@ class SonarExporter:
 
             time.sleep(max(1, PULL_INTERVAL_SECONDS))
 
+    def _format_error(self, exc: Exception) -> str:
+        # Keep errors terse and avoid leaking secrets. Include HTTP status when available.
+        if isinstance(exc, requests.HTTPError):
+            try:
+                status = exc.response.status_code if exc.response is not None else None
+            except Exception:
+                status = None
+            if status is not None:
+                return f"HTTPError {status}"
+            return "HTTPError"
+        return type(exc).__name__
+
     def refresh_once(self) -> None:
         projects = list(self._list_projects())
+
+        # Discover supported metric keys from SonarQube (cached) so we don't fail hard if a metric
+        # doesn't exist on this SonarQube instance.
+        supported_keys = self._get_supported_metric_keys()
+
         # Fetch measures for each project
         current_labels: Dict[str, Set[Tuple[str, str]]] = {k: set() for k in _METRIC_KEYS}
+
+        # Aggregate counters
+        total_projects = 0
+        total_ncloc = 0.0
+        total_bugs = 0.0
+        total_vulns = 0.0
+        total_code_smells = 0.0
+        projects_with_bugs_gt0 = 0
+        projects_with_vulns_gt0 = 0
+
+        total_lines = 0.0
+        total_statements = 0.0
+        total_functions = 0.0
+        total_classes = 0.0
+        total_files = 0.0
+        total_comment_lines = 0.0
 
         for project in projects:
             key = project["key"]
             name = project["name"]
             labels = (key, name)
 
-            measures = self._fetch_measures(key)
+            # If the project was renamed, remove the old labelset(s) for this key.
+            prev_name = self._project_key_to_name.get(key)
+            if prev_name is not None and prev_name != name:
+                for metric_key in _METRIC_KEYS:
+                    try:
+                        self._gauges[metric_key].remove(key, prev_name)
+                    except KeyError:
+                        pass
+            self._project_key_to_name[key] = name
+
+            measures = self._fetch_measures(key, supported_keys)
             for metric_key in _METRIC_KEYS:
                 g = self._gauges[metric_key]
                 value = measures.get(metric_key)
@@ -148,6 +302,48 @@ class SonarExporter:
                 else:
                     g.labels(project_key=key, project_name=name).set(value)
                 current_labels[metric_key].add(labels)
+
+            # Update aggregates (missing values are treated as 0 for totals)
+            total_projects += 1
+            ncloc_v = float(measures.get("ncloc") or 0.0)
+            lines_v = float(measures.get("lines") or 0.0)
+            statements_v = float(measures.get("statements") or 0.0)
+            functions_v = float(measures.get("functions") or 0.0)
+            classes_v = float(measures.get("classes") or 0.0)
+            files_v = float(measures.get("files") or 0.0)
+            comment_lines_v = float(measures.get("comment_lines") or 0.0)
+            bugs_v = float(measures.get("bugs") or 0.0)
+            vulns_v = float(measures.get("vulnerabilities") or 0.0)
+            code_smells_v = float(measures.get("code_smells") or 0.0)
+            total_ncloc += ncloc_v
+            total_lines += lines_v
+            total_statements += statements_v
+            total_functions += functions_v
+            total_classes += classes_v
+            total_files += files_v
+            total_comment_lines += comment_lines_v
+            total_bugs += bugs_v
+            total_vulns += vulns_v
+            total_code_smells += code_smells_v
+            if bugs_v > 0:
+                projects_with_bugs_gt0 += 1
+            if vulns_v > 0:
+                projects_with_vulns_gt0 += 1
+
+        # Publish global aggregates
+        self._global_projects_total.set(total_projects)
+        self._global_ncloc_total.set(total_ncloc)
+        self._global_lines_total.set(total_lines)
+        self._global_statements_total.set(total_statements)
+        self._global_functions_total.set(total_functions)
+        self._global_classes_total.set(total_classes)
+        self._global_files_total.set(total_files)
+        self._global_comment_lines_total.set(total_comment_lines)
+        self._global_bugs_total.set(total_bugs)
+        self._global_vulnerabilities_total.set(total_vulns)
+        self._global_code_smells_total.set(total_code_smells)
+        self._global_projects_with_bugs_gt0_total.set(projects_with_bugs_gt0)
+        self._global_projects_with_vulnerabilities_gt0_total.set(projects_with_vulns_gt0)
 
         # Remove stale labelsets if projects disappeared or were renamed
         for metric_key in _METRIC_KEYS:
@@ -159,11 +355,52 @@ class SonarExporter:
                     pass
             self._known_labelsets[metric_key] = current_labels[metric_key]
 
+        # Remove project_key->name mappings for projects no longer present.
+        current_keys = {p["key"] for p in projects}
+        for known_key in list(self._project_key_to_name.keys()):
+            if known_key not in current_keys:
+                del self._project_key_to_name[known_key]
+
     def _request_json(self, path: str, params: Optional[dict] = None) -> dict:
         url = f"{SONAR_URL}{path}"
         resp = self._session.get(url, params=params, timeout=15, verify=VERIFY_TLS)
         resp.raise_for_status()
         return resp.json()
+
+    def _get_supported_metric_keys(self) -> Set[str]:
+        # Refresh the cache at most every 60 minutes.
+        now = time.time()
+        if (
+            self._supported_metric_keys is not None
+            and self._supported_metric_keys_fetched_at is not None
+            and (now - self._supported_metric_keys_fetched_at) < 3600
+        ):
+            return self._supported_metric_keys
+
+        keys: Set[str] = set()
+        page = 1
+        page_size = 500
+        while True:
+            data = self._request_json(
+                "/api/metrics/search",
+                params={"p": page, "ps": page_size},
+            )
+            metrics = data.get("metrics") or []
+            if not metrics:
+                break
+            for m in metrics:
+                k = m.get("key")
+                if isinstance(k, str) and k:
+                    keys.add(k)
+            page += 1
+
+        # Never return an empty set (fallback to configured keys) to avoid disabling metrics.
+        if not keys:
+            keys = set(_METRIC_KEYS)
+
+        self._supported_metric_keys = keys
+        self._supported_metric_keys_fetched_at = now
+        return keys
 
     def _list_projects(self) -> Iterable[dict]:
         page = 1
@@ -185,8 +422,13 @@ class SonarExporter:
                     yield {"key": key, "name": name}
             page += 1
 
-    def _fetch_measures(self, project_key: str) -> Dict[str, float]:
-        metric_keys = ",".join(_METRIC_KEYS)
+    def _fetch_measures(self, project_key: str, supported_keys: Set[str]) -> Dict[str, float]:
+        # Only request keys known by SonarQube to avoid hard 4xx responses.
+        requested = [k for k in _METRIC_KEYS if k in supported_keys]
+        if not requested:
+            return {}
+
+        metric_keys = ",".join(requested)
         data = self._request_json(
             "/api/measures/component",
             params={"component": project_key, "metricKeys": metric_keys},

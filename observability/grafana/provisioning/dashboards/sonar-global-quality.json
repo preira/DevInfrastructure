@@ -1,0 +1,444 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 7 },
+      "id": 1,
+      "options": {
+        "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "${coverage_series}",
+          "legendFormat": "{{project_name}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Coverage % over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
+      "id": 2,
+      "options": {
+        "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "${dup_series}",
+          "legendFormat": "{{project_name}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Duplicated Lines Density % over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "custom": {
+            "axisPlacement": "left",
+            "axisLabel": "Cyclomatic",
+            "axisSoftMin": 0
+          },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Cognitive" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.axisLabel", "value": "Cognitive" }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": {
+        "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "${complexity_agg}((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity))",
+          "legendFormat": "Cyclomatic",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "${complexity_agg}((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity))",
+          "legendFormat": "Cognitive",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Complexity over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "mappings": [],
+          "custom": { "axisPlacement": "left", "axisLabel": "Total (days)", "axisSoftMin": 0 },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Average (days)" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.axisLabel", "value": "Average (days)" }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 14 },
+      "id": 4,
+      "options": {
+        "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_sqale_index unless sonar_project_sqale_index != sonar_project_sqale_index)) / 60 / 8",
+          "legendFormat": "Total (days)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "avg((sonar_project_sqale_index unless sonar_project_sqale_index != sonar_project_sqale_index)) / 60 / 8",
+          "legendFormat": "Average (days)",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Technical Debt (days) over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
+      "id": 5,
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "editorMode": "code", "expr": "count((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) < 10)", "instant": true, "legendFormat": "< 10", "range": false, "refId": "A" },
+        { "editorMode": "code", "expr": "count(((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) >= 10) and on(project_key, project_name) ((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) < 50))", "instant": true, "legendFormat": "10–49", "range": false, "refId": "B" },
+        { "editorMode": "code", "expr": "count(((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) >= 50) and on(project_key, project_name) ((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) < 200))", "instant": true, "legendFormat": "50–199", "range": false, "refId": "C" },
+        { "editorMode": "code", "expr": "count(((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) >= 200) and on(project_key, project_name) ((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) < 500))", "instant": true, "legendFormat": "200–499", "range": false, "refId": "D" },
+        { "editorMode": "code", "expr": "count((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity) >= 500)", "instant": true, "legendFormat": ">= 500", "range": false, "refId": "E" }
+      ],
+      "title": "Cyclomatic Complexity Distribution (all projects)",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
+      "id": 10,
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sort_desc(sum by (project_name) ((sonar_project_complexity unless sonar_project_complexity != sonar_project_complexity)))",
+          "instant": true,
+          "legendFormat": "{{project_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Cyclomatic Complexity Contribution (by project)",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 7 },
+      "id": 6,
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "editorMode": "code", "expr": "count((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) < 10)", "instant": true, "legendFormat": "< 10", "range": false, "refId": "A" },
+        { "editorMode": "code", "expr": "count(((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) >= 10) and on(project_key, project_name) ((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) < 50))", "instant": true, "legendFormat": "10–49", "range": false, "refId": "B" },
+        { "editorMode": "code", "expr": "count(((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) >= 50) and on(project_key, project_name) ((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) < 200))", "instant": true, "legendFormat": "50–199", "range": false, "refId": "C" },
+        { "editorMode": "code", "expr": "count(((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) >= 200) and on(project_key, project_name) ((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) < 500))", "instant": true, "legendFormat": "200–499", "range": false, "refId": "D" },
+        { "editorMode": "code", "expr": "count((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity) >= 500)", "instant": true, "legendFormat": ">= 500", "range": false, "refId": "E" }
+      ],
+      "title": "Cognitive Complexity Distribution (all projects)",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 7 },
+      "id": 11,
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sort_desc(sum by (project_name) ((sonar_project_cognitive_complexity unless sonar_project_cognitive_complexity != sonar_project_cognitive_complexity)))",
+          "instant": true,
+          "legendFormat": "{{project_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Cognitive Complexity Contribution (by project)",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 7 },
+      "id": 7,
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": ["lastNotNull"],
+          "sortBy": "Last",
+          "sortDesc": true
+        },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_blocker_violations unless sonar_project_blocker_violations != sonar_project_blocker_violations))",
+          "legendFormat": "Blocker",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_critical_violations unless sonar_project_critical_violations != sonar_project_critical_violations))",
+          "legendFormat": "Critical",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_major_violations unless sonar_project_major_violations != sonar_project_major_violations))",
+          "legendFormat": "Major",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_minor_violations unless sonar_project_minor_violations != sonar_project_minor_violations))",
+          "legendFormat": "Minor",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "editorMode": "code",
+          "expr": "sum((sonar_project_info_violations unless sonar_project_info_violations != sonar_project_info_violations))",
+          "legendFormat": "Info",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "Issues over Time (by severity)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PROMETHEUS" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "red", "value": 1 } ] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "debt_days" },
+            "properties": [
+              { "id": "unit", "value": "d" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "top10" },
+            "properties": [
+              { "id": "unit", "value": "none" },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "blue", "value": null },
+                    { "color": "red", "value": 1 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 14 },
+      "id": 8,
+      "options": {
+        "tiling": "treemapSquarify",
+        "textField": "project_key",
+        "sizeField": "debt_days",
+        "colorByField": "top10",
+        "labelFields": [
+          "project_name"
+        ]
+      },
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "project_key",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "instance": true,
+              "job": true,
+              "project_name 2": true
+            },
+            "renameByName": {
+              "project_key 1": "project_key",
+              "project_name 1": "project_name",
+              "Value": "debt_days",
+              "Value 1": "top10",
+              "Value #A": "debt_days",
+              "Value #B": "top10"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sort_desc(((sonar_project_sqale_index unless sonar_project_sqale_index != sonar_project_sqale_index)) / 60 / 8)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{project_name}}",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "(\n  (\n    ((sonar_project_sqale_index unless sonar_project_sqale_index != sonar_project_sqale_index)) / 60 / 8\n  )\n  >= bool scalar(\n    quantile(\n      0.9,\n      ((sonar_project_sqale_index unless sonar_project_sqale_index != sonar_project_sqale_index)) / 60 / 8\n    )\n  )\n)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "top_10_percent",
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Technical Debt Treemap (days, by project)",
+      "type": "marcusolsson-treemap-panel"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["sonarqube"],
+  "templating": {
+    "list": [
+      {
+        "name": "coverage_series",
+        "label": "Coverage Series",
+        "type": "custom",
+        "hide": 0,
+        "query": "Line Coverage (avg) : avg(sonar_project_line_coverage),Line Coverage (each project) : sonar_project_line_coverage,Condition Coverage (avg) : avg(sonar_project_branch_coverage),Condition Coverage (each project) : sonar_project_branch_coverage",
+        "current": { "text": "Line Coverage (avg)", "value": "avg(sonar_project_line_coverage)", "selected": true }
+      },
+      {
+        "name": "dup_series",
+        "label": "Duplication Series",
+        "type": "custom",
+        "hide": 0,
+        "query": "Duplicated Lines Density (avg) : avg(sonar_project_duplicated_lines_density),Duplicated Lines Density (each project) : sonar_project_duplicated_lines_density",
+        "current": { "text": "Duplicated Lines Density (avg)", "value": "avg(sonar_project_duplicated_lines_density)", "selected": true }
+      },
+      {
+        "name": "complexity_agg",
+        "label": "Complexity Aggregate",
+        "type": "custom",
+        "hide": 0,
+        "query": "sum,avg",
+        "options": [
+          { "text": "sum", "value": "sum", "selected": true },
+          { "text": "avg", "value": "avg", "selected": false }
+        ],
+        "current": { "text": "sum", "value": "sum", "selected": true }
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "SonarQube – Global Quality",
+  "uid": "sonarqube-global-quality",
+  "version": 1001
+}

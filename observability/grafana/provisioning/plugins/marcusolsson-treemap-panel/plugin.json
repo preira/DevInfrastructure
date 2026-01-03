@@ -1,0 +1,42 @@
+{
+    "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+    "type": "panel",
+    "name": "Treemap",
+    "id": "marcusolsson-treemap-panel",
+    "info": {
+        "description": "Area-based visualization of hierarchical data",
+        "author": {
+            "name": "Grafana Labs",
+            "url": "https://grafana.com"
+        },
+        "keywords": [
+            "treemap"
+        ],
+        "logos": {
+            "small": "img/logo.svg",
+            "large": "img/logo.svg"
+        },
+        "links": [
+            {
+                "name": "Website",
+                "url": "https://github.com/grafana/grafana-treemap-panel"
+            },
+            {
+                "name": "License",
+                "url": "https://github.com/grafana/grafana-treemap-panel/blob/main/LICENSE"
+            }
+        ],
+        "screenshots": [
+            {
+                "name": "Treemap",
+                "path": "img/screenshot.png"
+            }
+        ],
+        "version": "2.1.1",
+        "updated": "2025-05-28"
+    },
+    "dependencies": {
+        "grafanaDependency": ">8"
+    },
+    "buildMode": "production"
+}

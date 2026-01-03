@@ -71,32 +71,9 @@ The exporter does not push metrics.
 
 ## Run
 
-### Option A: run exporter alone
+Run this exporter as part of the full observability stack in [observability/docker-compose.yml](observability/docker-compose.yml).
 
-Before running, provide `SONAR_TOKEN` either via a local `.env` file in this folder, your shell environment, or `--env-file`.
-
-- Local `.env` (recommended for this folder): create `Sonarqube-etl/.env` with at least `SONAR_TOKEN=...`
-- PowerShell (temporary for current session): `$env:SONAR_TOKEN = "..."`
-- Reuse the observability env file: `docker compose --env-file ..\\observability\\.env ...`
-
-```bash
-cd Sonarqube-etl
-docker network create observability-net || true
-docker compose up -d --build
-```
-
-Example (Windows PowerShell) using the shared env file:
-
-```powershell
-cd .\Sonarqube-etl
-docker network create observability-net
-docker compose --env-file ..\observability\.env up -d --build
-docker compose --env-file ..\observability\.env down
-```
-
-### Option B: run via the full observability stack
-
-Use the compose in `observability/` (recommended).
+The exporter container is built and launched by the observability deployment; this folder only contains the exporter implementation and its Docker image definition.
 
 ## Safe operations
 

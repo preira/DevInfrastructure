@@ -1,7 +1,7 @@
 services:
   sonarqube-etl:
     build:
-      context: ../Sonarqube-etl
+      context: ../sonarqube-etl
     container_name: sonarqube-etl
     environment:
       SONAR_URL: ${SONAR_URL:-http://host.docker.internal:9000}
@@ -38,9 +38,12 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Needed for local debugging: editing plugin files invalidates signatures
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: marcusolsson-treemap-panel
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning/plugins:/var/lib/grafana/plugins:ro
     depends_on:
       - prometheus
     networks:

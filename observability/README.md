@@ -31,6 +31,11 @@ With the port update, SonarQube is expected at:
 
 - http://localhost:9000
 
+SonarQube is an external dependency for this stack:
+
+- Do not rebuild SonarQube.
+- Do not destroy or recreate SonarQube volumes.
+
 ## Configure
 
 This stack requires a SonarQube token:
@@ -52,23 +57,16 @@ Optional environment variables:
 From the base folder:
 
 ```bash
-cd observability
-docker compose up -d --build
+cd Sonarqube  # on Windows, `cd sonarqube` also works (case-insensitive)
+docker compose up -d
 ```
 
-### If you already have Prometheus/Grafana (merge mode)
-
-Bring up **only** the exporter (no Prometheus/Grafana containers from this folder):
+Then:
 
 ```bash
 cd observability
-docker compose -f docker-compose.exporter.yml up -d --build
+docker compose up -d --build
 ```
-
-Then add this scrape target to your existing Prometheus:
-
-- Preferred (if your Prometheus container is attached to `observability-net`): `sonarqube-etl:9119`
-- Fallback (no shared Docker network needed): `host.docker.internal:9119`
 
 To stop **without deleting data**:
 
@@ -76,18 +74,32 @@ To stop **without deleting data**:
 docker compose down
 ```
 
-Exporter-only stop:
-
-```bash
-docker compose -f docker-compose.exporter.yml down
-```
-
 Avoid:
 
 - `docker compose down -v` (removes volumes)
 
+## Grafana plugins (treemap)
+
+The **SonarQube – Global Quality** dashboard uses the Treemap panel plugin (`marcusolsson-treemap-panel`) for the technical debt visualization.
+
+To keep this deterministic across rebuilds, plugins are vendored in this repo and bind-mounted into Grafana:
+
+- `./grafana/provisioning/plugins` → `/var/lib/grafana/plugins:ro`
+
+The Treemap panel plugin lives under:
+
+- `./grafana/provisioning/plugins/marcusolsson-treemap-panel`
+
+Notes:
+
+- If you run `docker compose down -v`, Grafana’s volume is removed (dashboards/users/config state resets).
+- With the bind-mount in place, the treemap plugin itself will still be available after a rebuild, even if volumes are wiped.
+
+CRITICAL: Never destroy SonarQube volumes. SonarQube already contains projects and historical data.
+
 ## Access
 
+- SonarQube: http://localhost:9000
 - Prometheus UI: http://localhost:9090
 - Grafana UI: http://localhost:3000
 - Exporter metrics: http://localhost:9119/metrics
