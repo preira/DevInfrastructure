@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../grafana-plugins"
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "Abyss"
+	}
+}
